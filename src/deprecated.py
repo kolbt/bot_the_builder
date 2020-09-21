@@ -12,15 +12,16 @@ import random
 from collections import OrderedDict
 
 # The items I'll be scraping review data for
-train_items = ( 'office+chair',
-                'office+desk',
-                'kitchen+table',
-                'living+room+couch',
-                'end+table',
-                'bed+frame',
-                'crib',
-                'bookcase',
-                'coffee+table')
+train_items = ( 'office+chair' , 'office+desk' )
+#train_items = ( 'office+chair',
+#                'office+desk',
+#                'kitchen+table',
+#                'living+room+couch',
+#                'end+table',
+#                'bed+frame',
+#                'crib',
+#                'bookcase',
+#                'coffee+table')
 
 # This data was created by using the curl method explained above
 headers_list = [
@@ -112,7 +113,6 @@ reviews = []
 for i in range(len(train_items)):
 
     # What item am I scraping for
-    print("")
     print(train_items[i])
 
     # Distinct list for each search item
@@ -132,20 +132,8 @@ for i in range(len(train_items)):
     divs = soup.find_all("a", attrs={"class": "a-size-base a-link-normal a-text-normal"})
     for j in divs:
         item_urls[i].append(j.get("href"))
-        
-#    # Get all my product pages in a text file
-#    product_urls_text = train_items[i] + '_product_page_urls.txt'
-#    z = open(product_urls_text, 'w')
-#    for j in range(len(item_urls[i])):
-#        z.write(item_urls[i][j] + '\n')
-#    z.close()
-    
-    # Check to make sure we are getting good urls
-#    print(item_urls[i][-1])
+    print(item_urls[i][-1])
 
-    # Get all my product pages in a text file
-    product_urls_text = train_items[i] + '_product_page_urls.txt'
-    z = open(product_urls_text, 'w')
     # Go through product pages, get review page urls
     for j in range(len(item_urls[i])):
         response = request_page(item_urls[i][j], prefix="https://www.amazon.com", suffix="")
@@ -153,16 +141,27 @@ for i in range(len(train_items)):
             print(f'Response for {item_urls[i][j]}: {response}')
             soup = BeautifulSoup(response.content, "lxml")
             for k in soup.find_all("a",{'data-hook':"see-all-reviews-link-foot"}):
-                if k['href'] not in review_urls[i]:
-                    review_urls[i].append(k['href'])
-                    z.write(item_urls[i][j] + '\n')
-    z.close()
+                review_urls[i].append(k['href'])
 
     # At this point I'm going to make a text file that has all my product urls in it
+    print(review_urls[i][-1])
     review_urls_text = train_items[i] + '_review_page_urls.txt'
     g = open(review_urls_text, 'w')
-    for j in range(len(review_urls[i])):
+    for j in range(len(item_urls[i])):
         g.write(review_urls[i][j] + '\n')
     g.close()
-    # Check to make sure we are getting good review urls
-#    print(review_urls[i][-1])
+    
+    # Scrape the review urls for their content
+    for j in range(len(review_urls[i])):
+        # First 100 pages of reviews
+        for k in range(10):
+            response = request_page(review_urls[i][j], "https://www.amazon.com", "&pageNumber=" + str(k))
+            soup = BeautifulSoup(response.content, "lxml")
+            for l in soup.findAll("span",{'data-hook':"review-body"}):
+                reviews[i].append(l.text)
+
+    # Review list to dictionary
+    rev = {'reviews':reviews[i]}
+    # Dictionary to dataframe
+    review_data = pd.DataFrame.from_dict(rev)
+    review_data.to_csv(train_items[i] + '_reviews.csv', index=False)
