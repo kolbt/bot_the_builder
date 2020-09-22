@@ -164,7 +164,11 @@ def scrape(url, counter):
     # Download the page using requests
     print("Downloading %s"%url)
     current_proxy = get_proxy()
-    r = requests.get(url, headers=headers, proxies=current_proxy)
+    try:
+        r = requests.get(url, headers=headers, proxies=current_proxy)
+    except:
+        print("Connection Refused")
+        return None
     # Simple check to check if page was blocked (Usually 503)
     if r.status_code > 500:
         if "To discuss automated access to Amazon data please contact" in r.text:
@@ -190,7 +194,7 @@ for i in train_items:
             if "picassoRedirect" in url:
                 continue
             last_page = 0
-            for page_count in range(0, 500):
+            for page_count in range(0, 100):
                 data = scrape(url, page_count)
                 if data:
                     # Break if no reviews on page
