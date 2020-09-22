@@ -10,6 +10,7 @@ from time import sleep
 import csv
 from dateutil import parser as dateparser
 import random
+import csv
 
 # The items I'll be scraping review data for
 train_items = ( 'office+chair',
@@ -21,6 +22,40 @@ train_items = ( 'office+chair',
                 'crib',
                 'bookcase',
                 'coffee+table')
+          
+# The proxy list is not in the github (don't want anyone to have my credentials)
+def get_proxy_data(column):
+    f = open('../../proxylist.csv', "r")
+    lines = f.readlines()
+    result=[]
+    for x in lines:
+        result.append(x.split('\t')[column])
+    f.close()
+    return result
+    
+proxy_ip = get_proxy_data(0)
+del proxy_ip[0]
+port_http = get_proxy_data(1)
+port_socks = get_proxy_data(2)
+login = get_proxy_data(3)
+password = get_proxy_data(4)
+
+# Grab my proxy data
+def get_proxy():
+    # Pick a random proxy to use
+    in_proxy_ip = random.choice(proxy_ip)
+    user = login[1]
+    passwd = password[1]
+    passwd = passwd.rstrip()
+    ip = in_proxy_ip
+#    port = port_socks[1]
+    port = port_http[1]
+    # Assemble the url
+    proxy_url = "http://" + user + ":" + passwd + "@" + ip + ":" + port + "/"
+    return {
+        "http": proxy_url,
+        "https": proxy_url
+    }
 
 # This data was created by using the curl method explained above
 headers_list = [
@@ -82,23 +117,10 @@ def scrape(url, counter):
     # If you want more you can loop through page numbers
     url = "https://www.amazon.com" + url.rstrip() + "&pageNumber=" + str(counter)
     headers = random.choice(headers_list)
-#    headers = {
-#        'authority': 'www.amazon.com',
-#        'pragma': 'no-cache',
-#        'cache-control': 'no-cache',
-#        'dnt': '1',
-#        'upgrade-insecure-requests': '1',
-#        'user-agent': 'Mozilla/5.0 (X11; CrOS x86_64 8172.45.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.64 Safari/537.36',
-#        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
-#        'sec-fetch-site': 'none',
-#        'sec-fetch-mode': 'navigate',
-#        'sec-fetch-dest': 'document',
-#        'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
-#    }
-
     # Download the page using requests
     print("Downloading %s"%url)
-    r = requests.get(url, headers=headers)
+    current_proxy = get_proxy()
+    r = requests.get(url, headers=headers, proxies=current_proxy)
     # Simple check to check if page was blocked (Usually 503)
     if r.status_code > 500:
         if "To discuss automated access to Amazon data please contact" in r.text:
@@ -120,6 +142,9 @@ for i in train_items:
         writer = csv.DictWriter(outfile, fieldnames=["title","content","date","variant","images","verified","author","rating","product","url"],quoting=csv.QUOTE_ALL)
         writer.writeheader()
         for url in urllist.readlines():
+            # We don't want redirected urls
+            if "picassoRedirect" in url:
+                continue
             last_page = 0
             for page_count in range(0, 500):
                 data = scrape(url, page_count)
