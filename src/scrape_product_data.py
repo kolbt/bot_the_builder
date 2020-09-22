@@ -12,15 +12,16 @@ from dateutil import parser as dateparser
 import random
 
 # The items I'll be scraping review data for
-train_items = ( 'office+chair',
-                'office+desk',
-                'kitchen+table',
-                'living+room+couch',
-                'end+table',
-                'bed+frame',
-                'crib',
-                'bookcase',
-                'coffee+table')
+train_items = ( 'office+chair' , 'office+desk' )
+#train_items = ( 'office+chair',
+#                'office+desk',
+#                'kitchen+table',
+#                'living+room+couch',
+#                'end+table',
+#                'bed+frame',
+#                'crib',
+#                'bookcase',
+#                'coffee+table')
 
 # This data was created by using the curl method explained above
 headers_list = [
@@ -76,26 +77,12 @@ headers_list = [
 ]
 
 # Create an Extractor by reading from the YAML file
-e = Extractor.from_yaml_file('selectors_review.yml')
+e = Extractor.from_yaml_file('selectors_product.yml')
 
-def scrape(url, counter):
+def scrape(url):
     # If you want more you can loop through page numbers
-    url = "https://www.amazon.com" + url.rstrip() + "&pageNumber=" + str(counter)
+    url = "https://www.amazon.com" + url.rstrip()
     headers = random.choice(headers_list)
-#    headers = {
-#        'authority': 'www.amazon.com',
-#        'pragma': 'no-cache',
-#        'cache-control': 'no-cache',
-#        'dnt': '1',
-#        'upgrade-insecure-requests': '1',
-#        'user-agent': 'Mozilla/5.0 (X11; CrOS x86_64 8172.45.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.64 Safari/537.36',
-#        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
-#        'sec-fetch-site': 'none',
-#        'sec-fetch-mode': 'navigate',
-#        'sec-fetch-dest': 'document',
-#        'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
-#    }
-
     # Download the page using requests
     print("Downloading %s"%url)
     r = requests.get(url, headers=headers)
@@ -110,43 +97,18 @@ def scrape(url, counter):
     return e.extract(r.text)
 
 for i in train_items:
-    print("")
-    print(i)
-    print("")
     # Get the text file from the appropriate subfolder
-    text_urls = "./review_urls/" + i + "_review_page_urls.txt"
-    output = i + "_review_data.csv"
+    text_urls = "./product_urls/" + i + "_product_page_urls.txt"
+    output = i + "_product_data.csv"
     with open(text_urls,'r') as urllist, open(output,'w') as outfile:
-        writer = csv.DictWriter(outfile, fieldnames=["title","content","date","variant","images","verified","author","rating","product","url"],quoting=csv.QUOTE_ALL)
+        writer = csv.DictWriter(outfile, fieldnames=["product","ease_of_assembly"],quoting=csv.QUOTE_ALL)
         writer.writeheader()
         for url in urllist.readlines():
-            last_page = 0
-            for page_count in range(0, 500):
-                data = scrape(url, page_count)
-                if data:
-                    # Break if no reviews on page
-                    if data['reviews'] == None:
-                        break
-                    for r in data['reviews']:
-                        r["product"] = data["product_title"]
-                        r['url'] = url
-                        if r['rating'] == None:
-                            last_page = 1
-                            continue
-                        if 'verified' in r:
-                            if r['verified'] == None:
-                                r['verified'] = 'No'
-                            elif 'Verified Purchase' in r['verified']:
-                                r['verified'] = 'Yes'
-                            else:
-                                r['verified'] = 'Yes'
-                        r['rating'] = r['rating'].split(' out of')[0]
-                        date_posted = r['date'].split('on ')[-1]
-                        if r['images']:
-                            r['images'] = "\n".join(r['images'])
-                        r['date'] = dateparser.parse(date_posted).strftime('%d %b %Y')
-                        writer.writerow(r)
-                # If you've hit the last page of reviews move on to the next url
-                if last_page == 1:
-                    break
-                sleep(1)
+            data = scrape(url)
+            if data:
+                print(data)
+                for r in data['reviews']:
+                    r['product'] = data['Title']
+                    r['ease_of_assembly'] = r['ease_rating'].split(' out of')[0]
+                    writer.writerow(r)
+            sleep(1)

@@ -1,0 +1,15 @@
+reviews:
+    css: 'div.a-row.celwidget'
+    xpath: null
+    multiple: true
+    type: Text
+    children:
+        ease:
+            css: 'div#cr-summarization-attribute-attr-easy-to-assemble.a-section div.a-row span.a-size-base'
+            type: Text
+        ease_rating:
+            css: 'div#cr-summarization-attribute-attr-easy-to-assemble.a-section div.a-text-right span.a-size-base'
+            type: Text
+Title:
+    css: 'h1.a-size-large span.a-size-large'
+    type: Text

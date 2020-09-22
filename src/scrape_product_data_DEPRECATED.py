@@ -11,6 +11,27 @@ import csv
 import random
 from collections import OrderedDict
 
+# Get a proxy list
+def get_free_proxies():
+    url = "https://free-proxy-list.net/"
+    # get the HTTP response and construct soup object
+    soup = BeautifulSoup(requests.get(url).content, "html.parser")
+    proxies = []
+    for row in soup.find("table", attrs={"id": "proxylisttable"}).find_all("tr")[1:]:
+        tds = row.find_all("td")
+        try:
+            ip = tds[0].text.strip()
+            port = tds[1].text.strip()
+            host = f"{ip}:{port}"
+            proxies.append(host)
+        except IndexError:
+            continue
+    return proxies
+    
+proxies = get_free_proxies()
+proxy = proxies[0]
+print(proxy)
+
 # The items I'll be scraping review data for
 train_items = ( 'office+chair' , 'office+desk' )
 #train_items = ( 'office+chair',
@@ -23,10 +44,9 @@ train_items = ( 'office+chair' , 'office+desk' )
 #                'bookcase',
 #                'coffee+table')
 
-# This data was created by using the curl method explained above
 headers_list = [
     # Firefox 77 Mac
-     {
+    {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:77.0) Gecko/20100101 Firefox/77.0",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.5",
@@ -83,15 +103,11 @@ for headers in headers_list:
     for header,value in headers.items():
         h[header]=value
     ordered_headers_list.append(h)
-
-# This driver should allow javascript to load
-#driver = webdriver.PhantomJS()
         
-def request_page(in_url, prefix="https://www.amazon.com/s?k=", suffix="&ref=nb_sb_noss"):
+def request_page(in_url, prefix="https://www.amazon.com", suffix=""):
     '''This will request whatever page I feed in takes in prefix and suffix to url'''
     url = prefix + in_url + suffix
-    # For javascript if needed
-#    driver.get(my_url)
+    print(url)
     # Spoof the user agent
     header = random.choice(headers_list)
     r = requests.Session()
@@ -101,67 +117,39 @@ def request_page(in_url, prefix="https://www.amazon.com/s?k=", suffix="&ref=nb_s
         return page
     else:
         return "Error! Page status exit code {}".format(page.status_code)
-       
-# Product url
-item_urls = []
-# Link to reviews page
-review_urls = []
-# Text of each review
-reviews = []
+
 
 # Let's loop through our search items
-for i in range(len(train_items)):
+for i in train_items:
 
-    # What item am I scraping for
-    print(train_items[i])
-
-    # Distinct list for each search item
-    item_urls.append([])
-    review_urls.append([])
-    reviews.append([])
-    
-    # Get page content of product search
-    response = request_page(train_items[i])
- 
-    # This will just tell me if I was denied access
-    print(f'Response for general search: {response}\n')
-    # Instantiate beautifulsoup on the search page
-    soup = BeautifulSoup(response.content, "lxml")
-    
-    # This grabs the product urls
-    divs = soup.find_all("a", attrs={"class": "a-size-base a-link-normal a-text-normal"})
-    for j in divs:
-        item_urls[i].append(j.get("href"))
-    print(item_urls[i][-1])
-
-    # Go through product pages, get review page urls
-    for j in range(len(item_urls[i])):
-        response = request_page(item_urls[i][j], prefix="https://www.amazon.com", suffix="")
-        if response != "Error! Page status exit code 404":
-            print(f'Response for {item_urls[i][j]}: {response}')
+    # Open the corresponding text file
+    text_urls = "./product_urls/" + i + "_product_page_urls.txt"
+    output = i + "_product_data.csv"
+    with open(text_urls, 'r') as urllist, open(output, 'w') as outfile:
+        # Write the headers for the csv
+        writer = csv.DictWriter(outfile, fieldnames=["product", "ease_of_assembly", "sturdiness", "support", "comfort", "ergonomic"], quoting=csv.QUOTE_ALL)
+        # Loop through each url in the product url file
+        for url in urllist.readlines():
+            # Scrape the page
+            response = request_page(url)
+            print(response)
+            # Instantiate bs4
             soup = BeautifulSoup(response.content, "lxml")
-            for k in soup.find_all("a",{'data-hook':"see-all-reviews-link-foot"}):
-                review_urls[i].append(k['href'])
-
-    # At this point I'm going to make a text file that has all my product urls in it
-    print(review_urls[i][-1])
-    review_urls_text = train_items[i] + '_review_page_urls.txt'
-    g = open(review_urls_text, 'w')
-    for j in range(len(item_urls[i])):
-        g.write(review_urls[i][j] + '\n')
-    g.close()
-    
-    # Scrape the review urls for their content
-    for j in range(len(review_urls[i])):
-        # First 100 pages of reviews
-        for k in range(10):
-            response = request_page(review_urls[i][j], "https://www.amazon.com", "&pageNumber=" + str(k))
-            soup = BeautifulSoup(response.content, "lxml")
-            for l in soup.findAll("span",{'data-hook':"review-body"}):
-                reviews[i].append(l.text)
-
-    # Review list to dictionary
-    rev = {'reviews':reviews[i]}
-    # Dictionary to dataframe
-    review_data = pd.DataFrame.from_dict(rev)
-    review_data.to_csv(train_items[i] + '_reviews.csv', index=False)
+            
+            # Grab the product name
+            for l in soup.find_all("span",{'id':"productTitle"}):
+                print(l.text)
+            
+            # Ease of assembly
+            divs = soup.find("div",{'id':"cr-summarization-attribute-attr-easy-to-assemble"})
+            print(divs)
+            for l in divs.find_all("span",{'class':"a-size-base a-color-tertiary"}):
+                print(l.text)
+            
+            # Sturdiness
+            
+            # Support
+            
+            # Comfort
+            
+            # Ergonomic
