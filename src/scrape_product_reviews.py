@@ -13,12 +13,12 @@ import random
 import csv
 
 # The items I'll be scraping review data for
-train_items = ( 'office+chair',
-                'office+desk',
-                'kitchen+table',
-                'living+room+couch',
-                'end+table',
-                'bed+frame',
+#train_items = ( 'office+chair',
+#                'office+desk',
+#                'kitchen+table',
+#                'living+room+couch',
+#                'end+table',
+train_items = ( 'bed+frame',
                 'crib',
                 'bookcase',
                 'coffee+table')
