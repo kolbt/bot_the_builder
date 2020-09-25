@@ -1,33 +1,30 @@
 '''
 Writing the python file that my javascript will call (from Amazon Lambda)
 '''
-from flask import escape
+# Run with
+# serverless invoke local -f assembly-rating -d '{"body":[["Very difficult to assemble!"], ["Parts did not fit together well at all."], ["Very hard to put together, it took me over an hour!"]]}'
 import gensim
 import pickle
 from sklearn.linear_model import LogisticRegression
-import requests
 import json
 import numpy as np
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 import joblib
-import wget
-    
-bucket_name = 'insightdatascience7970-aiplatform'
-blob_name_embedding = 'pre_trained_w2v.model'
-blob_name_logreg = 'pre_trained_w2v_logistic_regression.pkl'
+import boto3
+from nltk.tokenize import word_tokenize
+#import wget
 
-# Load the relevant models
-#w2v_file = "../notebooks/pre_trained_w2v.model"
-#logreg_file = "../notebooks/pre_trained_w2v_logistic_regression.pkl"
-
-w2v_file = '/tmp/' + blob_name_embedding
-logreg_file = '/tmp/' + blob_name_logreg
-
-embedding_file = wget.download('https://storage.googleapis.com/insightdatascience7970-aiplatform/pre_trained_w2v.model', w2v_file)
-logreg_file = wget.download('https://storage.googleapis.com/insightdatascience7970-aiplatform/pre_trained_w2v_logistic_regression.pkl', logreg_file)
-
-embedding = gensim.models.Word2Vec.load(w2v_file)
-logreg = joblib.load(logreg_file)
+def get_model():
+    '''Download our models from the aws buckets'''
+    bucket = boto3.resource('s3').Bucket('insight-deploy-kolb')
+    embedding = bucket.download_file('pre_trained_w2v.model', '/tmp/embedding.model')
+    logreg = bucket.download_file('pre_trained_w2v_logistic_regression.pkl', '/tmp/logreg.pkl')
+    embedding_model = gensim.models.Word2Vec.load('/tmp/embedding.model')
+    embedding_model.init_sims(replace=True)
+    logreg_fit = joblib.load('/tmp/logreg.pkl')
+#    embedding_model = gensim.models.Word2Vec.load(embedding)
+#    logreg_fit = joblib.load(logreg)
+    return embedding_model, logreg_fit
 
 # The simplest way to get a value for the sentence is to take the mean
 def word_averaging(wv, sentence):
@@ -65,17 +62,19 @@ def read_article(file_json):
         article = filedata
     return article
 
-# Load the text data sent from JavaScript
-def provide_rating(request):
-    
+def lambda_handler(event, context):
+
     # Load in the text data
-    request_json = request.get_json(silent=True)
-    sentences = read_article(request_json)
+    sentences = event['body']
+    
+    # Load our models
+    embedding, logreg = get_model()
     
     # Compute the mean for each sentence
     means = []
     for sentence in sentences:
-        means.append(word_averaging(embedding, sentence))
+        tokenized = word_tokenize(sentence[0])
+        means.append(word_averaging(embedding.wv, tokenized))
         
     # Put into the model to see what sentences are about assembly
     predictions = logreg.predict(means)
