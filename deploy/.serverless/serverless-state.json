@@ -1,0 +1,299 @@
+{
+  "service": {
+    "service": "builder-v1-deploy",
+    "serviceObject": {
+      "name": "builder-v1-deploy"
+    },
+    "provider": {
+      "stage": "dev",
+      "variableSyntax": "\\${([^{}:]+?(?:\\(|:)[^:{}][^{}]*?)}",
+      "name": "aws",
+      "runtime": "python3.7",
+      "region": "us-east-1",
+      "deploymentBucket": "builder-v1",
+      "role": "arn:aws:iam::950665646930:role/lambda-role",
+      "iamRoleStatements": [
+        {
+          "Effect": "Allow",
+          "Action": [
+            "s3.GetObject",
+            "s3:DeleteObject"
+          ],
+          "Resource": [
+            "*"
+          ]
+        }
+      ],
+      "deploymentBucketObject": {
+        "name": "builder-v1"
+      },
+      "versionFunctions": true,
+      "compiledCloudFormationTemplate": {
+        "AWSTemplateFormatVersion": "2010-09-09",
+        "Description": "The AWS CloudFormation template for this Serverless application",
+        "Resources": {
+          "BuilderDashv1DashlambdaLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/builder-v1-lambda-function"
+            }
+          },
+          "BuilderDashv1DashlambdaLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": "builder-v1",
+                "S3Key": "serverless/builder-v1-deploy/dev/1601162087103-2020-09-26T23:14:47.103Z/builder-v1-deploy.zip"
+              },
+              "FunctionName": "builder-v1-lambda-function",
+              "Handler": "main.lambda_handler",
+              "MemorySize": 1024,
+              "Role": "arn:aws:iam::950665646930:role/lambda-role",
+              "Runtime": "python3.7",
+              "Timeout": 6,
+              "Description": "deploy assembly rating ml model"
+            },
+            "DependsOn": [
+              "BuilderDashv1DashlambdaLogGroup"
+            ]
+          },
+          "BuilderDashv1DashlambdaLambdaVersionrjxmPvIXLOxTjZDpuTQSDxHGBnQeMrR4vRpuGBYQ": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "BuilderDashv1DashlambdaLambdaFunction"
+              },
+              "CodeSha256": "DwdaSB3HxkH6i9NyLrrmXNviHc/gzcn6SasiaL5Y8dw=",
+              "Description": "deploy assembly rating ml model"
+            }
+          },
+          "ApiGatewayRestApi": {
+            "Type": "AWS::ApiGateway::RestApi",
+            "Properties": {
+              "Name": "dev-builder-v1-deploy",
+              "EndpointConfiguration": {
+                "Types": [
+                  "EDGE"
+                ]
+              },
+              "Policy": ""
+            }
+          },
+          "ApiGatewayResourceBuilderDashv1Dashcall": {
+            "Type": "AWS::ApiGateway::Resource",
+            "Properties": {
+              "ParentId": {
+                "Fn::GetAtt": [
+                  "ApiGatewayRestApi",
+                  "RootResourceId"
+                ]
+              },
+              "PathPart": "builder-v1-call",
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayMethodBuilderDashv1DashcallPost": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+              "HttpMethod": "POST",
+              "RequestParameters": {},
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceBuilderDashv1Dashcall"
+              },
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              },
+              "ApiKeyRequired": false,
+              "AuthorizationType": "NONE",
+              "Integration": {
+                "IntegrationHttpMethod": "POST",
+                "Type": "AWS_PROXY",
+                "Uri": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":apigateway:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":lambda:path/2015-03-31/functions/",
+                      {
+                        "Fn::GetAtt": [
+                          "BuilderDashv1DashlambdaLambdaFunction",
+                          "Arn"
+                        ]
+                      },
+                      "/invocations"
+                    ]
+                  ]
+                }
+              },
+              "MethodResponses": []
+            }
+          },
+          "ApiGatewayDeployment1601162040509": {
+            "Type": "AWS::ApiGateway::Deployment",
+            "Properties": {
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              },
+              "StageName": "dev"
+            },
+            "DependsOn": [
+              "ApiGatewayMethodBuilderDashv1DashcallPost"
+            ]
+          },
+          "BuilderDashv1DashlambdaLambdaPermissionApiGateway": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "BuilderDashv1DashlambdaLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "ApiGatewayRestApi"
+                    },
+                    "/*/*"
+                  ]
+                ]
+              }
+            }
+          }
+        },
+        "Outputs": {
+          "ServerlessDeploymentBucketName": {
+            "Value": "builder-v1"
+          },
+          "BuilderDashv1DashlambdaLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "BuilderDashv1DashlambdaLambdaVersionrjxmPvIXLOxTjZDpuTQSDxHGBnQeMrR4vRpuGBYQ"
+            }
+          },
+          "ServiceEndpoint": {
+            "Description": "URL of the service endpoint",
+            "Value": {
+              "Fn::Join": [
+                "",
+                [
+                  "https://",
+                  {
+                    "Ref": "ApiGatewayRestApi"
+                  },
+                  ".execute-api.",
+                  {
+                    "Ref": "AWS::Region"
+                  },
+                  ".",
+                  {
+                    "Ref": "AWS::URLSuffix"
+                  },
+                  "/dev"
+                ]
+              ]
+            }
+          }
+        }
+      },
+      "vpc": {}
+    },
+    "custom": {
+      "pythonRequirements": {
+        "slim": true,
+        "zip": true
+      }
+    },
+    "plugins": [
+      "serverless-python-requirements"
+    ],
+    "pluginsData": {},
+    "functions": {
+      "builder-v1-lambda": {
+        "name": "builder-v1-lambda-function",
+        "description": "deploy assembly rating ml model",
+        "handler": "main.lambda_handler",
+        "events": [
+          {
+            "http": "POST /builder-v1-call"
+          }
+        ],
+        "package": {},
+        "memory": 1024,
+        "timeout": 6,
+        "runtime": "python3.7",
+        "vpc": {},
+        "versionLogicalId": "BuilderDashv1DashlambdaLambdaVersionrjxmPvIXLOxTjZDpuTQSDxHGBnQeMrR4vRpuGBYQ"
+      }
+    },
+    "configValidationMode": "warn",
+    "serviceFilename": "serverless.yml",
+    "layers": {},
+    "initialServerlessConfig": {
+      "service": "builder-v1-deploy",
+      "plugins": {
+        "$ref": "$[\"service\"][\"plugins\"]"
+      },
+      "provider": {
+        "name": "aws",
+        "runtime": "python3.7",
+        "region": "us-east-1",
+        "deploymentBucket": {
+          "name": "builder-v1"
+        },
+        "role": "arn:aws:iam::950665646930:role/lambda-role",
+        "iamRoleStatements": [
+          {
+            "Effect": "Allow",
+            "Action": [
+              "s3.GetObject",
+              "s3:DeleteObject"
+            ],
+            "Resource": [
+              "*"
+            ]
+          }
+        ]
+      },
+      "custom": {
+        "$ref": "$[\"service\"][\"custom\"]"
+      },
+      "functions": {
+        "$ref": "$[\"service\"][\"functions\"]"
+      }
+    },
+    "isDashboardMonitoringPreconfigured": false,
+    "artifact": "/Users/kolbt/insight/bot_the_builder/deploy/.serverless/builder-v1-deploy.zip"
+  },
+  "package": {
+    "artifactDirectoryName": "serverless/builder-v1-deploy/dev/1601162087103-2020-09-26T23:14:47.103Z",
+    "artifact": "builder-v1-deploy.zip"
+  }
+}

@@ -1,0 +1,31 @@
+service : builder-v1-deploy
+
+plugins:
+  - serverless-python-requirements
+provider:
+ name: aws
+ runtime: python3.7
+ region : us-east-1
+ deploymentBucket:
+  name : builder-v1
+ role: arn:aws:iam::950665646930:role/lambda-role
+ iamRoleStatements:
+  - Effect : Allow
+    Action:
+     - s3.GetObject
+     - s3:DeleteObject
+    Resource:
+     - "*"
+
+custom:
+ pythonRequirements:
+  slim : true
+  zip : true
+
+functions:
+ builder-v1-lambda:
+  name: builder-v1-lambda-function
+  description : deploy assembly rating ml model
+  handler : main.lambda_handler
+  events :
+   - http : POST /builder-v1-call
