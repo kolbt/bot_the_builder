@@ -1,17 +1,9 @@
 '''
 Writing the python file that my javascript will call (from Amazon Lambda)
 '''
-# Run with
-# serverless invoke local -f builder-v1-lambda -d '{"body":[["Very difficult to assemble!"], ["Parts did not fit together well at all."], ["Very hard to put together, it took me over an hour!"]]}'
 
-# Zip everything? Maybe that will work
-try:
-    import unzip_requirements
-except ImportError:
-    pass
-
-import numpy as np
 import gensim
+import numpy as np
 from sklearn.linear_model import LogisticRegression
 import json
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
@@ -27,14 +19,13 @@ def get_model():
     embedding_model = gensim.models.Word2Vec.load('/tmp/embedding.model')
     embedding_model.init_sims(replace=True)
     logreg_fit = joblib.load('/tmp/logreg.pkl')
-#    embedding_model = gensim.models.Word2Vec.load(embedding)
-#    logreg_fit = joblib.load(logreg)
+
     return embedding_model, logreg_fit
 
 # The simplest way to get a value for the sentence is to take the mean
 def word_averaging(wv, sentence):
     '''Get the average normalized word vector for a sentence'''
-    all_words, mean = set(), []
+    all_words, mean= set(), []
     for word in sentence:
         if isinstance(word, np.ndarray):
             mean.append(word)
@@ -42,7 +33,6 @@ def word_averaging(wv, sentence):
             mean.append(wv.vectors_norm[wv.vocab[word].index])
             all_words.add(wv.vocab[word].index)
     if not mean:
-#        return [ 0 for i in wv.vector_size ]
         return np.zeros(wv.vector_size,)
 
     mean = gensim.matutils.unitvec(np.array(mean).mean(axis=0)).astype(np.float32)
@@ -60,30 +50,26 @@ def get_sentiment(sentence):
     stars = (out * 2.) + 3.
     return stars
 
-def read_article(file_json):
-    '''Convert json file to sentences'''
-    article = ''
-    filedata = json.dumps(file_json)
-    if len(filedata) < 100000:
-        article = filedata
-    return article
-
 def lambda_handler(event, context):
 
-    # Load in the text data
-    sentences = event['body']
+    # Load in the review data
+    reviews = list(event)
     
     # Load our models
     embedding, logreg = get_model()
     
     # Compute the mean for each sentence
     means = []
-    for sentence in sentences:
-        tokenized = gensim.utils.tokenize(sentence[0])
-        means.append(word_averaging(embedding.wv, tokenized))
+    sentences = []
+    for review in reviews:
+        for sentence in gensim.summarization.textcleaner.get_sentences(review):
+            tokenized = gensim.utils.tokenize(sentence)
+            means.append(word_averaging(embedding.wv, tokenized))
+            sentences.append(sentence)
         
     # Put into the model to see what sentences are about assembly
     predictions = logreg.predict(means)
+    out = predictions.tolist()
     
     # Assign sentiment to the predicted assembly sentences
     ratings = 0
@@ -94,5 +80,10 @@ def lambda_handler(event, context):
             number_ratings += 1.
             
     # Take the average
-    cumulative_rating = ratings / number_ratings
-    return json.dumps(cumulative_rating)
+    try:
+        cumulative_rating = ratings / number_ratings
+    except:
+        cumulative_rating = 3.0
+        
+    return [str(cumulative_rating)]
+
