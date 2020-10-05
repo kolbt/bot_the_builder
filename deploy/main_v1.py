@@ -63,7 +63,7 @@ def lambda_handler(event, context):
     sentences = []
     for review in reviews:
         for sentence in gensim.summarization.textcleaner.get_sentences(review):
-            tokenized = gensim.utils.tokenize(sentence)
+            tokenized = gensim.utils.tokenize(sentence, deacc=True, lowercase=True)
             means.append(word_averaging(embedding.wv, tokenized))
             sentences.append(sentence)
         
@@ -85,5 +85,7 @@ def lambda_handler(event, context):
     except:
         cumulative_rating = 3.0
         
-    return [str(cumulative_rating)]
+    output = round(cumulative_rating, 1)
+        
+    return [str(output)]
 
