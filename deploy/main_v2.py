@@ -154,6 +154,12 @@ def lambda_handler(event, context):
         else:
             assembly_scores.append(None)
             
+    # Get the max/min sentiment and the indices of the respective sentences
+    sentiment_max = max(x for x in assembly_scores if x is not None)
+    max_index = assembly_scores.index(sentiment_max)
+    sentiment_min = min(x for x in assembly_scores if x is not None)
+    min_index = assembly_scores.index(sentiment_min)
+            
     # Take the average
     try:
         cumulative_rating = ratings / number_ratings
@@ -162,11 +168,6 @@ def lambda_handler(event, context):
         
     # We want to give the user one decimal place
     output = round(cumulative_rating, 1)
-    # Return 3 reviews that mention assembly
-    ones = [index for index, element in enumerate(predictions) if element == 1]
-    random_sentence = random.sample(range(0, len(ones)), 2)
-    # Return the highest and lowest rated assembly sentences
     
-        
-    return [str(output), sentences[ones[random_sentence[0]]], sentences[ones[random_sentence[1]]]]
+    return [str(output), sentences[max_index], sentences[min_index]]
 
