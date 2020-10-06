@@ -144,10 +144,15 @@ def lambda_handler(event, context):
     # Assign sentiment to the predicted assembly sentences
     ratings = 0
     number_ratings = 0
+    assembly_scores = []
     for i in range(0, len(sentences)):
         if predictions[i] == 1:
-            ratings += get_sentiment(sentences[i])
+            sentence_sentiment = get_sentiment(sentences[i])
+            ratings += sentence_sentiment
+            assembly_scores.append(sentence_sentiment)
             number_ratings += 1.
+        else:
+            assembly_scores.append(None)
             
     # Take the average
     try:
@@ -160,6 +165,8 @@ def lambda_handler(event, context):
     # Return 3 reviews that mention assembly
     ones = [index for index, element in enumerate(predictions) if element == 1]
     random_sentence = random.sample(range(0, len(ones)), 2)
+    # Return the highest and lowest rated assembly sentences
+    
         
     return [str(output), sentences[ones[random_sentence[0]]], sentences[ones[random_sentence[1]]]]
 

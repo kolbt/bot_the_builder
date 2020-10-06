@@ -11,7 +11,7 @@
 				text-align: center;
 				font-size: 28px;
 				padding: 20px;
-				width: 200px;
+				width: 450px;
 				transition: all 0.5s;
 				cursor: pointer;
 				margin: 5px;
@@ -37,10 +37,61 @@
 				opacity: 1;
 				right: 0;
 			}
+			.lead-in {
+				font-size: 14px;
+				text-align: left;
+			}
+			.rating {
+				margin-top: 15px;
+				margin-bottom: 15px;
+				font-size: 20px;
+				text-align: center;
+
+			}
+			.review {
+				margin-top: 15px;
+				margin-bottom: 15px;
+				margin: 0 auto;
+				font-size: 18px;
+				text-align: center;
+				width: 325px;
+			}
 		</style>
 	</head>
 	<body>
 		<button id="clickme" class="button" style="vertical-align:middle"><span>Can you build it?</span></button>
 		<script type="text/javascript" src="popup.js" charset="utf-8"></script>
+
+		<div id="ease-lead-in" class="lead-in">
+			Ease of assembly:
+		</div>
+
+		<div class="rating">
+			<b id="ease-rating">? out of 5 </b>
+		</div>
+
+		<div id="review-lead-in" class="lead-in">
+			Here's what some reviewers said... 
+		</div>
+
+		<div id="positive-lead-in" class="lead-in" style="margin-bottom:15px">
+			A positive take: 
+		</div>
+
+		<div class="review">
+			<em id="positive-review">"So easy a caveman could do it?"</em>
+		</div>
+
+		<div id="negative-lead-in" class="lead-in" style="margin-top:15px;margin-bottom:15px">
+			The not-so-great side of things: 
+		</div>
+
+		<div class="review">
+			<em id="negative-review">"So hard a contractor couldn't do it?"</em>
+		</div>
 	</body>
 </html>
+
+
+
+

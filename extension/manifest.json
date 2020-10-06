@@ -2,7 +2,13 @@
   "name": "Bot the builder",
   "version": "1.1",
   "description": "Learn how difficult an item is to assemble, if it is typically missing parts, and what tools are required before you buy.",
-  "permissions": ["storage", "declarativeContent", "activeTab", "https://z27ce31j6d.execute-api.us-east-1.amazonaws.com/public/compute"],
+  "permissions": [
+  	"storage", 
+  	"declarativeContent", 
+  	"activeTab", 
+  	"tabs",
+  	"https://z27ce31j6d.execute-api.us-east-1.amazonaws.com/public/compute"
+  ],
   "browser_action": {
       "default_popup": "popup.html",
       "default_icon": {
