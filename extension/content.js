@@ -4,6 +4,13 @@ alert("Reading reviews (and drinking coffee), this may take a moment.");
 // This is the url to my python file (for once I deploy)
 // const api_url = 'https://z27ce31j6d.execute-api.us-east-1.amazonaws.com/public/compute';
 
+// Ideally I want to open the reviews automatically
+function openReviews(nOpen) {
+	var elements = document.getElementsByClassName('Button Button--alternate Button--large Button--plainText');
+	var requiredElement = elements[0];
+	requiredElement.click();
+}
+
 // This gives you a list of the review elements from Wayfair
 var text = document.body.getElementsByClassName('ProductReview-comments')
 // Call them by index and grab the text
