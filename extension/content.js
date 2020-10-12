@@ -33,6 +33,7 @@ var output = "?"
 const request = async () => {
     var response = await fetch('https://z27ce31j6d.execute-api.us-east-1.amazonaws.com/public/compute', {method: 'POST', body: jsonOut, headers:{'Content-Type': 'application/json'}});
     output = await response.text();
+    alert(output)
     chrome.runtime.onMessage.addListener(
 	    function(message, sender, sendResponse) {
 	        switch(message.type) {

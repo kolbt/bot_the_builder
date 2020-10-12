@@ -13,6 +13,7 @@ import gensim
 import gensim.parsing.preprocessing as gpp
 import numpy as np
 from sklearn.linear_model import LogisticRegression
+from sklearn.feature_extraction.text import CountVectorizer
 import json
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 import joblib
@@ -81,23 +82,44 @@ bow_words = ['100', 'abl', 'abl assembl', 'abl togeth', 'absolut', 'actual', 'ad
              'wrap bubbl', 'year']
       
 # The preprocessing filters
-filter = [lambda x: x.lower(),
+my_filter = [lambda x: x.lower(),
                     gpp.strip_tags,
                     gpp.split_alphanum,
                     gpp.strip_non_alphanum,
                     gpp.strip_punctuation,
                     gpp.strip_multiple_whitespaces,
                     gpp.stem_text,
-                    gpp.strip_short,
-                    gpp.remove_stopwords]
+                    gpp.strip_short]
+                    
+# Get a custom list of stopwords
+stops = list(gpp.STOPWORDS)
+stops.remove("part")
 
 def get_model():
     '''Download our models from the aws buckets'''
     bucket = boto3.resource('s3').Bucket('builder-v1')
+    
     # !!! Make sure the names match with what is in your bucket on s3 !!!
     logreg = bucket.download_file('model/BoW_logistic_regression.pkl', '/tmp/logreg.pkl')
     logreg_fit = joblib.load('/tmp/logreg.pkl')
-    return logreg_fit
+    # Load the LDA model as well
+    lda = bucket.download_file('model/lda_model.pkl', '/tmp/lda_model.pkl')
+    lda_fit = joblib.load('/tmp/lda_model.pkl')
+    # And the LDA vectorizer
+    lda_cv = bucket.download_file('model/lda_cv.pkl', '/tmp/lda_cv.pkl')
+    lda_cv_out = joblib.load('/tmp/lda_cv.pkl')
+    
+    return logreg_fit, lda_fit, lda_cv_out
+    
+def preprocess_sentence(sentence, my_filter):
+    # Apply gensim filter
+    out = gpp.preprocess_string(sentence, my_filter)
+    # Remove custom stopwords
+    for i in reversed(out):
+        if i in stops:
+            out.remove(i)
+    # Return the tokenized words
+    return out
     
 def get_sentiment(sentence):
     '''Assign sentiment to any give sentence using VADER'''
@@ -116,10 +138,12 @@ def lambda_handler(event, context):
     # Load in the review data
     reviews = list(event)
     # Load our models
-    logreg = get_model()
+    logreg, lda, lda_cv = get_model()
     
     # A list to store all of our (unprocessed) sentences
     sentences = []
+    # A list of sentence topic probabilities
+    sentence_probabilities = []
     # Store each sentence vector
     bow_vectors = []
     # Clean the text of each sentence
@@ -127,7 +151,7 @@ def lambda_handler(event, context):
         for sentence in gensim.summarization.textcleaner.get_sentences(review):
             sentences.append(sentence)
             # Clean the text
-            clean_sentence = gpp.preprocess_string(sentence, filter)
+            clean_sentence = preprocess_sentence(sentence, my_filter)
             # Compute the sentence vector
             sentence_vector = []
             for token in bow_words:
@@ -137,20 +161,58 @@ def lambda_handler(event, context):
                     sentence_vector.append(0)
             # Append the sentence vector to our collection
             bow_vectors.append(sentence_vector)
+            if len(clean_sentence) < 1:
+                sentence_probabilities.append([0., 0., 0.])
+                continue
+            # Compute the topic probability of the words in our sentence
+            word_probabilities = lda.transform(lda_cv.transform(clean_sentence))
+            # Compute topic probability of the sentence
+            sentence_probability = [*map(np.mean, zip(*word_probabilities))]
+            # Store in list
+            sentence_probabilities.append(sentence_probability)
         
     # Put into the model to see what sentences are about assembly
     predictions = logreg.predict(bow_vectors)
     
     # Assign sentiment to the predicted assembly sentences
-    ratings = 0
-    number_ratings = 0
+    ratings = 0.
+    number_ratings = 0.
     assembly_scores = []
+    tool = 0.
+    tool_total = 0.
+    time = 0.
+    time_total = 0.
+    quality = 0.
+    quality_total = 0.
     for i in range(0, len(sentences)):
         if predictions[i] == 1:
+            # Compute the sentiment
             sentence_sentiment = get_sentiment(sentences[i])
             ratings += sentence_sentiment
             assembly_scores.append(sentence_sentiment)
             number_ratings += 1.
+#            # Weight the sentiment by the subtopic rating
+#            tool += (sentence_sentiment * sentence_probabilities[i][0])
+#            tool_total += sentence_probabilities[i][0]
+#            time += (sentence_sentiment * sentence_probabilities[i][1])
+#            time_total += sentence_probabilities[i][1]
+#            quality += (sentence_sentiment * sentence_probabilities[i][2])
+#            quality_total += sentence_probabilities[i][2]
+            # Get the index of the highest probability topic
+            category = sentence_probabilities[i].index(max(sentence_probabilities[i]))
+            # Tools category
+            if category == 0:
+                tool += sentence_sentiment
+                tool_total += 1.
+            # Time category
+            elif category == 1:
+                time += sentence_sentiment
+                time_total += 1.
+            # Quality category
+            else:
+                quality += sentence_sentiment
+                quality_total += 1.
+            
         else:
             assembly_scores.append(None)
             
@@ -163,11 +225,31 @@ def lambda_handler(event, context):
     # Take the average
     try:
         cumulative_rating = ratings / number_ratings
+        # We want to give the user one decimal place
+        output = round(cumulative_rating, 1)
     except:
         cumulative_rating = 3.0
         
-    # We want to give the user one decimal place
-    output = round(cumulative_rating, 1)
+    # Same for tool rating
+    try:
+        cumulative_tool = tool / tool_total
+        out_tool = round(cumulative_tool, 1)
+    except:
+        out_tool = "?"
+       
+    # Same for time rating
+    try:
+        cumulative_time = time / time_total
+        out_time = round(cumulative_time, 1)
+    except:
+        out_time = "?"
+        
+    # Same for quality rating
+    try:
+        cumulative_quality = quality / quality_total
+        out_quality = round(cumulative_quality, 1)
+    except:
+        out_quality = "?"
     
-    return [str(output), sentences[max_index], sentences[min_index]]
+    return [str(output), str(out_tool), str(out_time), str(out_quality), sentences[max_index], sentences[min_index]]
 

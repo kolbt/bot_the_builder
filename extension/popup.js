@@ -13,11 +13,12 @@ chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
         	if(output)
         	{
         		var display = JSON.parse(output)
-        		var str1 = display[0]
-        		var str2 = " out of 5"
-	        	document.getElementById('ease-rating').innerHTML = str1.concat(str2);
-	        	document.getElementById('positive-review').innerHTML = "\"" + display[1] + "\"";
-	        	document.getElementById('negative-review').innerHTML = "\"" + display[2] + "\"";
+                document.getElementById('ease-rating').innerHTML = display[0] + " out of 5";
+                document.getElementById('tool-rating').innerHTML = display[1] + " out of 5";
+                document.getElementById('time-rating').innerHTML = display[2] + " out of 5";
+                document.getElementById('quality-rating').innerHTML = display[3] + " out of 5";
+	        	document.getElementById('positive-review').innerHTML = "\"" + display[4] + "\"";
+	        	document.getElementById('negative-review').innerHTML = "\"" + display[5] + "\"";
         	}
         });
     });
