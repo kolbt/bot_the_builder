@@ -1,5 +1,5 @@
 // An alert to let the broswer know it could take a bit
-alert("Reading reviews (and drinking coffee), this may take a moment.");
+// alert("Reading reviews (and drinking coffee), this may take a moment.");
 
 // This is the url to my python file (for once I deploy)
 // const api_url = 'https://z27ce31j6d.execute-api.us-east-1.amazonaws.com/public/compute';
@@ -25,7 +25,7 @@ for (i = 0; i < text.length; i++) {
 var jsonOut = JSON.stringify(out)
 
 // Make sure you've got the data
-alert("Okay, I've read the reviews, let me think for a second... ");
+// alert("Okay, I've read the reviews, let me think for a second... ");
 
 // Store the output here
 var output = "?"
@@ -33,7 +33,7 @@ var output = "?"
 const request = async () => {
     var response = await fetch('https://z27ce31j6d.execute-api.us-east-1.amazonaws.com/public/compute', {method: 'POST', body: jsonOut, headers:{'Content-Type': 'application/json'}});
     output = await response.text();
-    alert(output)
+    alert("Your assembly summary is ready to read, cheers!")
     chrome.runtime.onMessage.addListener(
 	    function(message, sender, sendResponse) {
 	        switch(message.type) {

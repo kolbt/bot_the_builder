@@ -19,6 +19,8 @@ chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
                 document.getElementById('quality-rating').innerHTML = display[3] + " out of 5";
 	        	document.getElementById('positive-review').innerHTML = "\"" + display[4] + "\"";
 	        	document.getElementById('negative-review').innerHTML = "\"" + display[5] + "\"";
+                // Update the popup
+                //location.reload();
         	}
         });
     });
